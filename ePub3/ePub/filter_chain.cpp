@@ -130,6 +130,7 @@ ByteStream::size_type FilterChainSyncStream::ReadBytes(void* bytes, size_type le
 	else 
 	{
 		size_type result = _input->ReadBytes(bytes, len);
+        if (result <= 0) return 0;
 		result = FilterBytes(bytes, result);
 		size_type toMove = std::min(len, _read_cache.GetBufferSize());
 		::memcpy_s(bytes, len, _read_cache.GetBytes(), toMove);
@@ -148,12 +149,12 @@ ByteStream::size_type FilterChainSyncStream::FilterBytes(void* bytes, size_type 
 		size_type filteredLen = 0;
 		void* filteredData = pair.first->FilterData(pair.second.get(), buf.GetBytes(), buf.GetBufferSize(), &filteredLen);
 		if (filteredData == nullptr || filteredLen == 0) {
-			if (filteredData != nullptr && filteredData != bytes)
+			if (filteredData != nullptr && filteredData != buf.GetBytes())
 				delete[] reinterpret_cast<uint8_t*>(filteredData);
 			throw std::logic_error("ChainLinkProcessor: ContentFilter::FilterData() returned no data!");
 		}
 
-		if (filteredData != bytes)
+		if (filteredData != buf.GetBytes())
 		{
 			buf = ByteBuffer(reinterpret_cast<uint8_t*>(filteredData), filteredLen);
 			result = filteredLen;
